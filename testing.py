@@ -32,7 +32,7 @@ header_names = [
     'iga_ad_1_knk[1]',
     'iga_ad_1_knk[2]',
     'iga_ad_1_knk[3]',
-    'iga_ad_l_knk[4]',
+    'iga_ad_1_knk[4]',
     'iga_ad_1_knk[5]',
     'lamb_sp[1]',
     'lamb_sp[2]',
