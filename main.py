@@ -148,7 +148,7 @@ boost_max_timing_advance = find_float('ignition timing advance for #1 cylinder',
 
 knonk_min_engine_rpm = find_int('engine rpm', 'iga_ad_1_knk[{}]'.format(read_knock(df).index(min_knock)), min_knock)
 
-print(max_engine_rpm, 'rpm in gear', gear_max_engine_rpm)
+print(int(max_engine_rpm), 'rpm in gear', gear_max_engine_rpm)
 print(max_timing_advance, '˚ timing advance in gear', gear_max_timing_advance, 'at', timing_advance_max_rpm, 'rpm,', timing_advance_max_boost, 'psi')
 print(min_knock, '˚ worst knock in cylinder', read_knock(df).index(min_knock), 'in gear', gear_most_knock, 'at', knonk_min_engine_rpm, 'rpm')
 print(max_boost, 'psi peak boost in gear', gear_peak_boost, 'at', boost_max_engine_rpm, 'rpm,', boost_max_timing_advance, '˚ advance')
