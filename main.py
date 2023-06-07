@@ -64,20 +64,17 @@ def read_sheet(sheet):
     df = pd.read_csv(sheet, header=2, names=header_names)
     return df
 
-def read_row(df, row):
-    return df.iloc[row]
-
-def read_col(df, col):
-    return df.iloc[:, get_header_index(col)]
-
-def read_value(df, row, col):
-    return df.iloc[row, get_header_index(col)]
+def trim_sheet(df):
+    df = df.loc[df[df['commanded throttle actuator control'] >= 99.0].index[0]:df[df['commanded throttle actuator control'] >= 99.0].index[-1]]
+    df = df.loc[df[df['ignition timing advance for #1 cylinder'] >= 0.0].index[0]:df[df['ignition timing advance for #1 cylinder'] >= 0.0].index[-1]]
+    df = df.loc[df[df['lamb_ls_up[1]'] < 1.0].index[0]:df[df['lamb_ls_up[1]'] < 1.0].index[-1]]
+    return df
 
 def read_max(df, col):
-    return df.iloc[:, get_header_index(col)].max()
+    return float(df.iloc[:, get_header_index(col)].max())
 
 def read_min(df, col):
-    return df.iloc[:, get_header_index(col)].min()
+    return float(df.iloc[:, get_header_index(col)].min())
 
 def read_knock(df):
     knk0 = round(float(read_min(df, 'iga_ad_1_knk[0]')), 2)
@@ -88,10 +85,10 @@ def read_knock(df):
     knk5 = round(float(read_min(df, 'iga_ad_1_knk[5]')), 2)
     return [knk0, knk1, knk2, knk3, knk4, knk5]
 
-def read_hpfp(df):
+def read_hpfp(df, max_dc):
     hpfp = read_max(df, 'pump_vol_vcv')
-    if (hpfp > 1000):
-        hpfp_maxed = df[df['pump_vol_vcv'] > 99]
+    if (hpfp >= max_dc):
+        hpfp_maxed = df[df['pump_vol_vcv'] >= max_dc]
         rpm = hpfp_maxed['engine rpm'].values
         gear = hpfp_maxed['gear'].values
         hpfp_dc = []
@@ -103,68 +100,35 @@ def read_hpfp(df):
         gear = df.loc[df['pump_vol_vcv'] == hpfp, 'gear'].values[0]
         return [gear, int(rpm), math.trunc(hpfp * 10) / 10]
 
-def read_boost(df):
-    throttle = read_max(df, 'commanded throttle actuator control')
-    if (throttle > 99):
-        wot = df[df['commanded throttle actuator control'] > 99]
-        boost_actual = wot['map_mes'].values
-        ambient = wot['amp_mes'].values
-        boost_data = []
-        for i in range(len(wot)):
-            boost_data.append(int(boost_actual[i] - ambient[i]))
-        return boost_data
+def read_hpfp(df, max_dc):
+    hpfp = read_max(df, 'pump_vol_vcv')
+    if hpfp >= max_dc:
+        hpfp_maxed = df[df['pump_vol_vcv'] >= max_dc]
+        rpm = hpfp_maxed['engine rpm'].values
+        gear = hpfp_maxed['gear'].values
+        hpfpv = hpfp_maxed['pump_vol_vcv'].values
+        hpfp_dc = []
+        for i in range(len(hpfp_maxed)):
+            hpfp_dc.append('{}% {}@{}'.format(hpfpv[i], gear[i], int(rpm[i])))
+        return hpfp_dc
+    else:
+        rpm = df.loc[df['pump_vol_vcv'] == hpfp, 'engine rpm'].values[0]
+        gear = df.loc[df['pump_vol_vcv'] == hpfp, 'gear'].values[0]
+        return ['{}% {}@{}'.format(math.trunc(hpfp * 10) / 10, gear, int(rpm))]
+
+def find_int(lookup_col, cur_col, cur_val):
+    return int(df.loc[df[cur_col] == cur_val, '{}'.format(lookup_col)].values[0])
+
+def find_float(lookup_col, cur_col, cur_val):
+    return int(df.loc[df[cur_col] == cur_val, '{}'.format(lookup_col)].values[0])
+
+def find_boost(cur_col, cur_val):
+    return round(float(df.loc[df[cur_col] == cur_val, 'map_mes'].values[0] - df.loc[df[cur_col] == cur_val, 'amp_mes'].values[0]) * 0.0145, 1)
 
 df = read_sheet('E40 1320ft.csv')
-df = df[df['vs'] != 0]
-print(df)
-input()
-df = df[df['commanded throttle actuator control'] > 99.0]
-df = df[df['ignition timing advance for #1 cylinder'] > 0.0]
-df = df[df['lamb_ls_up[2]'] < 1.0]
-print(df)
-input()
+df = trim_sheet(df)
 
-# Assuming your dataframe is named 'df'
-
-# Calculate actual boost and record gear changes
-actual_boost = df.loc[df['commanded throttle actuator control'] > 99, 'map_mes'] - df.loc[df['commanded throttle actuator control'] > 99, 'amp_mes']
-gear_changes = df[(df['gear'].diff() > 0) & (df['gear'].diff().notnull())]
-
-# Exclude the first gear change from 0 to 1
-gear_changes = gear_changes.iloc[1:]
-
-# Plot actual boost and gear changes
-plt.figure(figsize=(10, 6))
-plt.plot(actual_boost, label='Actual Boost')
-for index, row in gear_changes.iterrows():
-    plt.axvline(x=index, color='red', linestyle='--')
-plt.title("Actual Boost with Gear Changes")
-plt.xlabel("Index")
-plt.ylabel("Actual Boost")
-
-# Calculate the step size for y-axis
-boost_min = min(actual_boost)
-boost_max = max(actual_boost)
-gridlines = 20
-step = (boost_max - boost_min) / (gridlines - 1)
-
-plt.yticks(np.arange(boost_min, boost_max+step, step))  # Set y-axis ticks
-plt.grid(True)  # Display gridlines
-plt.legend()
-
-# Display gear changes horizontally
-gear_change_ticks = list(gear_changes.index)
-gear_change_labels = [f"{int(row['gear']-1)}->{int(row['gear'])}" for _, row in gear_changes.iterrows()]
-plt.xticks(gear_change_ticks, gear_change_labels, rotation=0)
-
-plt.show()
-
-input()
-
-print(int(read_max(df, 'engine rpm')), 'rpm')
-print(round(read_max(df, 'ignition timing advance for #1 cylinder'), 1), '˚')
-print(round(read_min(df, 'iga_ad_1_knk[0]'), 1), '˚')
-print(round((read_max(df, 'map_mes') - read_max(df, 'amp_mes')) * 0.0145, 1), 'psi')
-print(read_knock(df))
-print(read_hpfp(df))
-print(read_boost(df))
+#print(int(read_max(df, 'engine rpm')), 'rpm in gear', find_int('gear', 'engine rpm', read_max(df, 'engine rpm')))
+#print(round(read_max(df, 'ignition timing advance for #1 cylinder'), 1), '˚ timing advance in gear', find_int('gear', 'ignition timing advance for #1 cylinder', read_max(df, 'ignition timing advance for #1 cylinder')), 'at', find_int('engine rpm', 'ignition timing advance for #1 cylinder', read_max(df, 'ignition timing advance for #1 cylinder')), 'rpm,', find_boost('ignition timing advance for #1 cylinder', read_max(df, 'ignition timing advance for #1 cylinder')), 'psi')
+#print(min(read_knock(df)), '˚ worst knock in cylinder', read_knock(df).index(min(read_knock(df))), 'in gear', find_int('gear', 'iga_ad_1_knk[{}]'.format(read_knock(df).index(min(read_knock(df)))), min(read_knock(df))), 'at', find_int('engine rpm', 'iga_ad_1_knk[{}]'.format(read_knock(df).index(min(read_knock(df)))), min(read_knock(df))), 'rpm')
+#print(round((read_max(df, 'map_mes') - read_max(df, 'amp_mes')) * 0.0145, 1), 'psi peak boost in gear', find_int('gear', 'map_mes', read_max(df, 'map_mes')), 'at', find_int('engine rpm', 'map_mes', read_max(df, 'map_mes')), 'rpm,', find_float('ignition timing advance for #1 cylinder', 'map_mes', read_max(df, 'map_mes')), '˚ advance')
