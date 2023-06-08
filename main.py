@@ -1,5 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 import math
 import os
 
@@ -65,9 +68,11 @@ def read_sheet(sheet):
     return df
 
 def trim_sheet(df):
-    df = df.loc[df[df['commanded throttle actuator control'] >= 99.0].index[0]:df[df['commanded throttle actuator control'] >= 99.0].index[-1]]
-    df = df.loc[df[df['ignition timing advance for #1 cylinder'] >= 0.0].index[0]:df[df['ignition timing advance for #1 cylinder'] >= 0.0].index[-1]]
-    df = df.loc[df[df['lamb_ls_up[1]'] < 1.0].index[0]:df[df['lamb_ls_up[1]'] < 1.0].index[-1]]
+    #df = df.loc[df[df['commanded throttle actuator control'] >= 50.0].index[0]:df[df['commanded throttle actuator control'] >= 50.0].index[-1]]
+    #df = df.loc[df[df['ignition timing advance for #1 cylinder'] >= 0.0].index[0]:df[df['ignition timing advance for #1 cylinder'] >= 0.0].index[-1]]
+    #df = df[df['vs'] != 0]
+    #rpm_min = read_min(df, 'engine rpm')
+    #df = df[df['engine rpm'] >= rpm_min + 1000]
     return df
 
 def read_max(df, col):
@@ -125,6 +130,36 @@ def find_float(df, lookup_col, cur_col, cur_val):
 def find_boost(df, cur_col, cur_val):
     return round(float(df.loc[df[cur_col] == cur_val, 'map_mes'].values[0] - df.loc[df[cur_col] == cur_val, 'amp_mes'].values[0]) * 0.0145, 1)
 
+def graph_time_engine_rpm(df, column, name):
+    # Filter the DataFrame based on 'commanded throttle actuator control' > 99
+    filtered_df = df[df['commanded throttle actuator control'] > 99]
+
+    # Find the midpoint of the filtered data
+    midpoint = filtered_df['time'].iloc[len(filtered_df) // 2]
+
+    # Calculate the start and end times for the graph (15 seconds centered around midpoint)
+    start_time = midpoint - 7.5
+    end_time = midpoint + 7.5
+
+    # Trim the DataFrame based on the start and end times
+    trimmed_df = df[(df['time'] >= start_time) & (df['time'] <= end_time)]
+
+    # Create the plot
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+
+    ax1.plot(trimmed_df['time'], trimmed_df['engine rpm'], color='gray')
+    ax2.plot(trimmed_df['time'], trimmed_df[column], color='r')
+
+    ax1.set_xlabel('Time')
+    ax1.set_ylabel('Engine RPM', color='gray')
+    ax2.set_ylabel(name, color='r')
+
+    ax1.xaxis.set_major_locator(ticker.MultipleLocator(1))
+    ax1.yaxis.set_major_locator(ticker.MultipleLocator(500))
+    plt.grid(True)
+    plt.show()
+
 def log_summary(logfile):
     df = read_sheet(logfile)
     df = df.dropna(how='any')
@@ -154,6 +189,8 @@ def log_summary(logfile):
     print(max_timing_advance, '˚ timing advance in gear', gear_max_timing_advance, 'at', timing_advance_max_rpm, 'rpm,', timing_advance_max_boost, 'psi')
     print(round(min_knock, 2), '˚ worst knock in cylinder', read_knock(df).index(min_knock), 'in gear', gear_most_knock, 'at', knonk_min_engine_rpm, 'rpm')
     print(max_boost, 'psi peak boost in gear', gear_peak_boost, 'at', boost_max_engine_rpm, 'rpm,', boost_max_timing_advance, '˚ advance')
+
+    graph_time_engine_rpm(df, 'pump_vol_vcv', 'HPFP duty cycle')
 
 def log():
     directory = os.getcwd()
