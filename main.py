@@ -125,8 +125,8 @@ def find_float(df, lookup_col, cur_col, cur_val):
 def find_boost(df, cur_col, cur_val):
     return round(float(df.loc[df[cur_col] == cur_val, 'map_mes'].values[0] - df.loc[df[cur_col] == cur_val, 'amp_mes'].values[0]) * 0.0145, 1)
 
-def log_summary(log):
-    df = read_sheet(log)
+def log_summary(logfile):
+    df = read_sheet(logfile)
     df = df.dropna(how='any')
     df = trim_sheet(df)
 
@@ -155,10 +155,13 @@ def log_summary(log):
     print(round(min_knock, 2), '˚ worst knock in cylinder', read_knock(df).index(min_knock), 'in gear', gear_most_knock, 'at', knonk_min_engine_rpm, 'rpm')
     print(max_boost, 'psi peak boost in gear', gear_peak_boost, 'at', boost_max_engine_rpm, 'rpm,', boost_max_timing_advance, '˚ advance')
 
-directory = os.getcwd()
-for filename in os.listdir(directory):
-    if filename.endswith(".csv"):
-        file_path = os.path.join(directory, filename)
-        print(file_path)
-        log_summary(file_path)
-        print()
+def log():
+    directory = os.getcwd()
+    for filename in os.listdir(directory):
+        if filename.endswith(".csv"):
+            logfile = os.path.join(directory, filename)
+            print(os.path.basename(logfile))
+            log_summary(logfile)
+            print()
+
+log()
