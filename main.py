@@ -192,7 +192,7 @@ def log_summary(logfile):
 
     graph_time_engine_rpm(df, 'pump_vol_vcv', 'HPFP duty cycle')
 
-def log():
+def main():
     directory = os.getcwd()
     for filename in os.listdir(directory):
         if filename.endswith(".csv"):
@@ -201,4 +201,5 @@ def log():
             log_summary(logfile)
             print()
 
-log()
+if __name__ == '__main__':
+    main()
