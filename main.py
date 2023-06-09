@@ -150,11 +150,9 @@ def graph_time_engine_rpm(logfile, df, columns):
     start_threshold = 99.0
     end_threshold = 99.0
     num_rows = 50
-
     pull = False
     start_index = 0
     end_index = 0
-
     for index, row in df.iterrows():
         if row['commanded throttle actuator control'] >= start_threshold and not pull:
             start_index = index
@@ -162,25 +160,22 @@ def graph_time_engine_rpm(logfile, df, columns):
         if pull and row['commanded throttle actuator control'] <= end_threshold:
             end_index = index
             break
-
     start_point = max(0, start_index - num_rows)
     end_point = min(len(df) - 1, end_index + num_rows)
-
     trimmed_df = df.iloc[start_point:end_point + 1].copy()
     trimmed_df['time'] = trimmed_df['time'] - trimmed_df['time'].iloc[0]
-
     fig = go.Figure()
-
     columns.sort()
-
     for i, column in enumerate(columns):
+        min_val = trimmed_df[column].min()
+        max_val = trimmed_df[column].max()
+        scale = max_val - min_val
         if column == 'engine rpm':
-            hovertemplate = '<b>%{y}</b>'
-            fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column], mode='lines', name=column, hovertemplate=hovertemplate))
+            hovertemplate = '<b>%{text:.2f}</b>'
+            fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column] / scale, mode='lines', name=column, hovertemplate=hovertemplate, text=trimmed_df[column]))
         else:
-            hovertemplate = '<b>%{y}</b>'
-            fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column], mode='lines', name=column, visible='legendonly', hovertemplate=hovertemplate))
-
+            hovertemplate = '<b>%{text}</b>'
+            fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column] / scale, mode='lines', name=column, visible='legendonly', hovertemplate=hovertemplate, text=trimmed_df[column]))
     fig.update_layout(
         title='{}'.format(logfile),
         xaxis=dict(title='Time (seconds)', dtick=1),
@@ -190,7 +185,6 @@ def graph_time_engine_rpm(logfile, df, columns):
         hoverlabel=dict(namelength=-1),
         plot_bgcolor='white'
     )
-
     fig.show()
 
 def main():
