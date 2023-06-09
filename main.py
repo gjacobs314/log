@@ -171,17 +171,17 @@ def graph_time_engine_rpm(logfile, df, columns):
         max_val = trimmed_df[column].max()
         scale = max_val - min_val
         if column == 'engine rpm':
-            hovertemplate = '<b>%{text:.2f}</b>'
+            hovertemplate = '<b>%{text:.0f}</b>'
             fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column] / scale, mode='lines', name=column, hovertemplate=hovertemplate, text=trimmed_df[column]))
         else:
-            hovertemplate = '<b>%{text}</b>'
+            hovertemplate = '<b>%{text:.2f}</b>'
             fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column] / scale, mode='lines', name=column, visible='legendonly', hovertemplate=hovertemplate, text=trimmed_df[column]))
     fig.update_layout(
         title='{}'.format(logfile),
         xaxis=dict(title='Time (seconds)', dtick=1),
-        yaxis=dict(title=''),
+        yaxis=dict(showticklabels=False),
         hovermode='x unified',
-        legend=dict(orientation='v', font=dict(size=8), x=1, y=0.5),
+        legend=dict(orientation='v', font=dict(size=8), x=1.075, y=0.5),
         hoverlabel=dict(namelength=-1),
         plot_bgcolor='white'
     )
