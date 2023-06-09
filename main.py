@@ -119,6 +119,33 @@ def find_float(df, lookup_col, cur_col, cur_val):
 def find_boost(df, cur_col, cur_val):
     return round(float(df.loc[df[cur_col] == cur_val, 'map_mes'].values[0] - df.loc[df[cur_col] == cur_val, 'amp_mes'].values[0]) * 0.0145, 1)
 
+def print_log_summary(df):
+    max_engine_rpm = read_max(df, 'engine rpm')
+    max_timing_advance = read_max(df, 'ignition timing advance for #1 cylinder')
+    min_knock = min(read_knock(df))
+    max_boost = round((read_max(df, 'map_mes') - read_max(df, 'amp_mes')) * 0.0145, 1)
+
+    timing_advance_max_rpm = find_int(df, 'engine rpm', 'ignition timing advance for #1 cylinder', max_timing_advance)
+    timing_advance_max_boost = find_float(df, 'map_mes', 'ignition timing advance for #1 cylinder', max_timing_advance)
+    timing_advance_ambient = find_float(df, 'amp_mes', 'ignition timing advance for #1 cylinder', max_timing_advance)
+    timing_advance_max_boost = round((timing_advance_max_boost - timing_advance_ambient) * 0.0145, 1)
+
+    gear_max_engine_rpm = find_int(df, 'gear', 'engine rpm', max_engine_rpm)
+    gear_max_timing_advance = find_int(df, 'gear', 'ignition timing advance for #1 cylinder', max_timing_advance)
+    gear_most_knock = find_int(df, 'gear', 'iga_ad_1_knk[{}]'.format(read_knock(df).index(min_knock)), min_knock)
+    gear_peak_boost = find_int(df, 'gear', 'map_mes', read_max(df, 'map_mes'))
+
+    boost_max_engine_rpm = find_int(df, 'engine rpm', 'map_mes', read_max(df, 'map_mes'))
+    boost_max_timing_advance = find_float(df, 'ignition timing advance for #1 cylinder', 'map_mes', read_max(df, 'map_mes'))
+
+    knonk_min_engine_rpm = find_int(df, 'engine rpm', 'iga_ad_1_knk[{}]'.format(read_knock(df).index(min_knock)), min_knock)
+
+    print()
+    print(int(max_engine_rpm), 'rpm in gear', gear_max_engine_rpm)
+    print(max_timing_advance, '˚ timing advance in gear', gear_max_timing_advance, 'at', timing_advance_max_rpm, 'rpm,', timing_advance_max_boost, 'psi')
+    print(round(min_knock, 2), '˚ worst knock in cylinder', read_knock(df).index(min_knock), 'in gear', gear_most_knock, 'at', knonk_min_engine_rpm, 'rpm')
+    print(max_boost, 'psi peak boost in gear', gear_peak_boost, 'at', boost_max_engine_rpm, 'rpm,', boost_max_timing_advance, '˚ advance')
+
 def graph_time_engine_rpm(logfile, df, columns):
     start_threshold = 99.0
     end_threshold = 99.0
@@ -165,33 +192,6 @@ def graph_time_engine_rpm(logfile, df, columns):
     )
 
     fig.show()
-
-def print_log_summary(df):
-    max_engine_rpm = read_max(df, 'engine rpm')
-    max_timing_advance = read_max(df, 'ignition timing advance for #1 cylinder')
-    min_knock = min(read_knock(df))
-    max_boost = round((read_max(df, 'map_mes') - read_max(df, 'amp_mes')) * 0.0145, 1)
-
-    timing_advance_max_rpm = find_int(df, 'engine rpm', 'ignition timing advance for #1 cylinder', max_timing_advance)
-    timing_advance_max_boost = find_float(df, 'map_mes', 'ignition timing advance for #1 cylinder', max_timing_advance)
-    timing_advance_ambient = find_float(df, 'amp_mes', 'ignition timing advance for #1 cylinder', max_timing_advance)
-    timing_advance_max_boost = round((timing_advance_max_boost - timing_advance_ambient) * 0.0145, 1)
-
-    gear_max_engine_rpm = find_int(df, 'gear', 'engine rpm', max_engine_rpm)
-    gear_max_timing_advance = find_int(df, 'gear', 'ignition timing advance for #1 cylinder', max_timing_advance)
-    gear_most_knock = find_int(df, 'gear', 'iga_ad_1_knk[{}]'.format(read_knock(df).index(min_knock)), min_knock)
-    gear_peak_boost = find_int(df, 'gear', 'map_mes', read_max(df, 'map_mes'))
-
-    boost_max_engine_rpm = find_int(df, 'engine rpm', 'map_mes', read_max(df, 'map_mes'))
-    boost_max_timing_advance = find_float(df, 'ignition timing advance for #1 cylinder', 'map_mes', read_max(df, 'map_mes'))
-
-    knonk_min_engine_rpm = find_int(df, 'engine rpm', 'iga_ad_1_knk[{}]'.format(read_knock(df).index(min_knock)), min_knock)
-
-    print()
-    print(int(max_engine_rpm), 'rpm in gear', gear_max_engine_rpm)
-    print(max_timing_advance, '˚ timing advance in gear', gear_max_timing_advance, 'at', timing_advance_max_rpm, 'rpm,', timing_advance_max_boost, 'psi')
-    print(round(min_knock, 2), '˚ worst knock in cylinder', read_knock(df).index(min_knock), 'in gear', gear_most_knock, 'at', knonk_min_engine_rpm, 'rpm')
-    print(max_boost, 'psi peak boost in gear', gear_peak_boost, 'at', boost_max_engine_rpm, 'rpm,', boost_max_timing_advance, '˚ advance')
 
 def main():
     directory = os.getcwd()
