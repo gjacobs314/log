@@ -196,7 +196,6 @@ def main():
             df = df.dropna(how='any')
             print_log_summary(df)
             graph_time_engine_rpm(os.path.basename(logfile), df, header_names[2:])
-            return
             
 if __name__ == '__main__':
     main()
