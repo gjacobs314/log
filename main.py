@@ -1,8 +1,5 @@
+import plotly.graph_objects as go
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
 import math
 import os
 
@@ -67,14 +64,6 @@ def read_sheet(sheet):
     df = pd.read_csv(sheet, header=2, names=header_names)
     return df
 
-def trim_sheet(df):
-    #df = df.loc[df[df['commanded throttle actuator control'] >= 50.0].index[0]:df[df['commanded throttle actuator control'] >= 50.0].index[-1]]
-    #df = df.loc[df[df['ignition timing advance for #1 cylinder'] >= 0.0].index[0]:df[df['ignition timing advance for #1 cylinder'] >= 0.0].index[-1]]
-    #df = df[df['vs'] != 0]
-    #rpm_min = read_min(df, 'engine rpm')
-    #df = df[df['engine rpm'] >= rpm_min + 1000]
-    return df
-
 def read_max(df, col):
     return float(df.iloc[:, get_header_index(col)].max())
 
@@ -130,41 +119,52 @@ def find_float(df, lookup_col, cur_col, cur_val):
 def find_boost(df, cur_col, cur_val):
     return round(float(df.loc[df[cur_col] == cur_val, 'map_mes'].values[0] - df.loc[df[cur_col] == cur_val, 'amp_mes'].values[0]) * 0.0145, 1)
 
-def graph_time_engine_rpm(df, column, name):
-    # Filter the DataFrame based on 'commanded throttle actuator control' > 99
-    filtered_df = df[df['commanded throttle actuator control'] > 99]
+def graph_time_engine_rpm(logfile, df, columns):
+    start_threshold = 99.0
+    end_threshold = 99.0
+    num_rows = 50
 
-    # Find the midpoint of the filtered data
-    midpoint = filtered_df['time'].iloc[len(filtered_df) // 2]
+    pull = False
+    start_index = 0
+    end_index = 0
 
-    # Calculate the start and end times for the graph (15 seconds centered around midpoint)
-    start_time = midpoint - 7.5
-    end_time = midpoint + 7.5
+    for index, row in df.iterrows():
+        if row['commanded throttle actuator control'] >= start_threshold and not pull:
+            start_index = index
+            pull = True
+        if pull and row['commanded throttle actuator control'] <= end_threshold:
+            end_index = index
+            break
 
-    # Trim the DataFrame based on the start and end times
-    trimmed_df = df[(df['time'] >= start_time) & (df['time'] <= end_time)]
+    start_point = max(0, start_index - num_rows)
+    end_point = min(len(df) - 1, end_index + num_rows)
 
-    # Create the plot
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
+    trimmed_df = df.iloc[start_point:end_point + 1].copy()
+    trimmed_df['time'] = trimmed_df['time'] - trimmed_df['time'].iloc[0]
 
-    ax1.plot(trimmed_df['time'], trimmed_df['engine rpm'], color='gray')
-    ax2.plot(trimmed_df['time'], trimmed_df[column], color='r')
+    fig = go.Figure()
 
-    ax1.set_xlabel('Time')
-    ax1.set_ylabel('Engine RPM', color='gray')
-    ax2.set_ylabel(name, color='r')
+    columns.sort()
 
-    ax1.xaxis.set_major_locator(ticker.MultipleLocator(1))
-    ax1.yaxis.set_major_locator(ticker.MultipleLocator(500))
-    plt.grid(True)
-    plt.show()
+    for column in columns:
+        if column == 'engine rpm':
+            fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column], mode='lines', name=column))
+        else:
+            fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column], mode='lines', name=column, visible='legendonly'))
 
-def log_summary(logfile):
-    df = read_sheet(logfile)
-    df = df.dropna(how='any')
-    df = trim_sheet(df)
+    fig.update_layout(
+        title='{}'.format(logfile),
+        xaxis=dict(title='Time (seconds)', dtick=1),
+        yaxis=dict(title='Value'),
+        hovermode='x unified',
+        legend=dict(orientation='v', font=dict(size=8), x=1, y=0.5),
+        hoverlabel=dict(namelength=-1),
+        plot_bgcolor='white'
+    )
 
+    fig.show()
+
+def print_log_summary(df):
     max_engine_rpm = read_max(df, 'engine rpm')
     max_timing_advance = read_max(df, 'ignition timing advance for #1 cylinder')
     min_knock = min(read_knock(df))
@@ -185,21 +185,22 @@ def log_summary(logfile):
 
     knonk_min_engine_rpm = find_int(df, 'engine rpm', 'iga_ad_1_knk[{}]'.format(read_knock(df).index(min_knock)), min_knock)
 
+    print()
     print(int(max_engine_rpm), 'rpm in gear', gear_max_engine_rpm)
     print(max_timing_advance, '˚ timing advance in gear', gear_max_timing_advance, 'at', timing_advance_max_rpm, 'rpm,', timing_advance_max_boost, 'psi')
     print(round(min_knock, 2), '˚ worst knock in cylinder', read_knock(df).index(min_knock), 'in gear', gear_most_knock, 'at', knonk_min_engine_rpm, 'rpm')
     print(max_boost, 'psi peak boost in gear', gear_peak_boost, 'at', boost_max_engine_rpm, 'rpm,', boost_max_timing_advance, '˚ advance')
 
-    graph_time_engine_rpm(df, 'pump_vol_vcv', 'HPFP duty cycle')
-
 def main():
     directory = os.getcwd()
     for filename in os.listdir(directory):
-        if filename.endswith(".csv"):
+        if filename.endswith('.csv'):
             logfile = os.path.join(directory, filename)
-            print(os.path.basename(logfile))
-            log_summary(logfile)
-            print()
+            df = read_sheet(logfile)
+            df = df.dropna(how='any')
+            print_log_summary(df)
+            graph_time_engine_rpm(os.path.basename(logfile), df, header_names[2:])
+            #graph_time_engine_rpm(os.path.basename(logfile), df, ['engine rpm'])
 
 if __name__ == '__main__':
     main()
