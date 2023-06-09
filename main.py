@@ -157,7 +157,7 @@ def graph_time_engine_rpm(logfile, df, columns):
     fig.update_layout(
         title='{}'.format(logfile),
         xaxis=dict(title='Time (seconds)', dtick=1),
-        yaxis=dict(title='Value'),
+        yaxis=dict(title=''),
         hovermode='x unified',
         legend=dict(orientation='v', font=dict(size=8), x=1, y=0.5),
         hoverlabel=dict(namelength=-1),
