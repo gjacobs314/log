@@ -146,41 +146,18 @@ def graph_time_engine_rpm(logfile, df, columns):
 
     columns.sort()
 
-    colors = [
-        '#FF0000', '#00FF00', '#0000FF',  # Primary colors (red, green, blue)
-        '#FFA500', '#FFFF00', '#00FFFF',  # Secondary colors (orange, yellow, cyan)
-        '#FFC0CB', '#800080', '#008000',  # Tertiary colors (pink, purple, green)
-        '#800000', '#008080', '#000080',  # Darker shades of red, cyan, and blue
-        '#FF4500', '#FFD700', '#00FF7F',  # Vivid shades of orange, gold, and chartreuse
-        '#FF1493', '#8A2BE2', '#ADFF2F',  # Deep pink, blue violet, and green yellow
-        '#B22222', '#00CED1', '#8B008B',  # Brick red, dark turquoise, and dark magenta
-        '#DC143C', '#00BFFF', '#FF00FF',  # Crimson, deep sky blue, and magenta
-        '#8B0000', '#48D1CC', '#9400D3',  # Dark red, medium turquoise, and dark violet
-        '#CD5C5C', '#7FFFD4', '#9932CC',  # Indian red, aquamarine, and dark orchid
-        '#FF69B4', '#00FA9A', '#8FBC8F',  # Hot pink, medium spring green, and dark sea green
-        '#FF6347', '#40E0D0', '#DA70D6',  # Tomato, turquoise, and orchid
-        '#FF7F50', '#00FF8C', '#BA55D3',  # Coral, bright green, and medium orchid
-        '#FF4500', '#66CDAA', '#800080',  # Orange red, medium aquamarine, and purple
-        '#FF8C00', '#20B2AA', '#9932CC',  # Dark orange, light sea green, and dark orchid
-        '#FFD700', '#7FFF00', '#9370DB',  # Gold, chartreuse, and medium purple
-        '#FF1493', '#00CED1', '#BA55D3',  # Deep pink, dark turquoise, and medium orchid
-        '#B22222', '#00FF7F', '#9400D3',  # Brick red, spring green, and dark violet
-        '#CD5C5C', '#32CD32', '#8B008B'   # Indian red, lime green, and dark magenta
-    ]
-
     for i, column in enumerate(columns):
         if column == 'engine rpm':
-            color = colors[i % len(colors)]
-            hovertemplate = '<b><span style=\'color:{};\'>%{{y}}</span></b>'.format(color)
-            fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column], mode='lines', name=column, hovertemplate=hovertemplate, line=dict(color=color)))
+            hovertemplate = '<b>%{y}</b>'
+            fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column], mode='lines', name=column, hovertemplate=hovertemplate))
         else:
-            color = colors[i % len(colors)]
-            hovertemplate = '<b><span style=\'color:{};\'>%{{y}}</span></b>'.format(color)
-            fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column], mode='lines', name=column, visible='legendonly', hovertemplate=hovertemplate, line=dict(color=color)))
+            hovertemplate = '<b>%{y}</b>'
+            fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column], mode='lines', name=column, visible='legendonly', hovertemplate=hovertemplate))
 
     fig.update_layout(
-        title='\'{}\''.format(logfile),
+        title='{}'.format(logfile),
         xaxis=dict(title='Time (seconds)', dtick=1),
+        yaxis=dict(title='Value'),
         hovermode='x unified',
         legend=dict(orientation='v', font=dict(size=8), x=1, y=0.5),
         hoverlabel=dict(namelength=-1),
