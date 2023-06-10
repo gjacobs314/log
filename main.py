@@ -171,7 +171,7 @@ def graph_time_engine_rpm(logfile, df, columns):
         max_val = trimmed_df[column].max()
         scale = max_val - min_val
         if column == 'engine rpm':
-            hovertemplate = '<b>%{text:.0f}</b>'
+            hovertemplate = '<b>%{text:.2f}</b>'
             fig.add_trace(go.Scatter(x=trimmed_df['time'], y=trimmed_df[column] / scale, mode='lines', name=column, hovertemplate=hovertemplate, text=trimmed_df[column]))
         else:
             hovertemplate = '<b>%{text:.2f}</b>'
